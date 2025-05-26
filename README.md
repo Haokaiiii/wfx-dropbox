@@ -98,7 +98,10 @@ The `NAMESPACE_ID` and `TEMPLATE_PATH` are currently hardcoded in `index.js`. Yo
 
 ## Polling Mechanism
 
-The application uses `node-schedule` to poll the WorkflowMax API every minute (configurable in `index.js`) for jobs created since the last check.
+The application uses `node-schedule` to poll the WorkflowMax API every minute (configurable in `index.js`). 
+- **Initial Sync:** On its first run after startup, the application looks back 24 hours and attempts to sync jobs created or modified within that period.
+- **Ongoing Sync:** After the initial sync, it polls for jobs created or modified since the last successful check.
+- **Pre-existing Jobs:** The application does not automatically go back and create folders for all historical jobs in WorkflowMax beyond the initial 24-hour window. It processes jobs as they appear "new" or "recently modified" according to the WorkflowMax API within its polling window. If an old job is updated in WorkflowMax in a way that makes it appear in the API results for recent jobs, it would then be processed.
 
 ## Logging
 
@@ -124,6 +127,7 @@ The application logs its activities to the console with timestamps. This include
     *   On startup, the server initializes, loads environment variables, and attempts to identify the specified Dropbox team member (`DROPBOX_API_SELECT_USER_EMAIL`).
     *   It then lists the contents of the root of the configured Dropbox namespace (`NAMESPACE_ID`) to find and map the paths for the primary destination folders (e.g., "ISA PROJECT JOBS", "ISA SURVEY PTY LTD", "ISA SURVEYORS PTY LTD"). These mappings are stored in `global.folderIds`.
     *   If these folders are not found, a critical error is logged, and job processing might be impaired.
+    *   The `lastChecked` time for polling WorkflowMax is initialized to 24 hours prior to the current time.
 
 2.  **OAuth Flow:**
     *   The `/oauth/login` endpoint initiates the OAuth 2.0 flow with WorkflowMax.
@@ -132,8 +136,9 @@ The application logs its activities to the console with timestamps. This include
 3.  **Job Polling:**
     *   A scheduled job runs every minute.
     *   It ensures valid WorkflowMax access tokens are available (refreshing if necessary).
-    *   It fetches jobs from WorkflowMax API created since the last poll.
+    *   It fetches jobs from the WorkflowMax API using the `from` parameter set to `lastChecked` and `to` set to the current time. On the very first run, `lastChecked` is 24 hours in the past.
     *   The response from WFM can be XML or JSON, and the application attempts to parse it accordingly.
+    *   After successfully processing jobs, `lastChecked` is updated to the current time for the next polling cycle.
 
 4.  **Job Processing:**
     *   For each new job:
