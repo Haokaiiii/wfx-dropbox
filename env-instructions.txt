@@ -24,7 +24,7 @@ DEBUG=true
 VERBOSE=true
 
 # Specific Team Member Email for Dropbox Operations - IMPORTANT
-DROPBOX_API_SELECT_USER_EMAIL=mings@isagroups.com.au
+DROPBOX_API_SELECT_USER_EMAIL= xxx@xxx.com
 ```
 
 The key changes from your previous setup are:
