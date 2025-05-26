@@ -1,0 +1,36 @@
+# Instructions for .env File Setup
+
+Please create or update your .env file with the following configurations:
+
+```
+# WorkflowMax Credentials
+WFX_CLIENT_ID=YOUR_WORKFLOWMAX_CLIENT_ID
+WFX_CLIENT_SECRET=YOUR_WORKFLOWMAX_CLIENT_SECRET
+WFX_ACCOUNT_ID=YOUR_WORKFLOWMAX_ACCOUNT_ID
+
+# Dropbox Credentials & Settings
+DROPBOX_TOKEN=YOUR_DROPBOX_TOKEN
+
+# Namespace ID for Innovative Surveying Public folder
+NAMESPACE_ID=10371174816
+
+# Important: Update the path format to use namespace format for both of these
+DROPBOX_ROOT="ns:10371174816"
+TEMPLATE_PATH="ns:10371174816/ISA SURVEY PTY LTD (7-8)/0000_CAD TEMPLATE AND DEALINGS TEMPLATE"
+
+# Application Settings
+PORT=3000
+DEBUG=true
+VERBOSE=true
+
+# Specific Team Member Email for Dropbox Operations - IMPORTANT
+DROPBOX_API_SELECT_USER_EMAIL=mings@isagroups.com.au
+```
+
+The key changes from your previous setup are:
+
+1. Using the namespace path format `ns:10371174816` instead of absolute paths
+2. Ensuring DROPBOX_API_SELECT_USER_EMAIL is set to match your team member
+3. Using consistent namespace IDs throughout the configuration
+
+Once you've updated your .env file, restart the application with `node index.js`. 
