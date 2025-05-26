@@ -157,4 +157,3 @@ The application logs its activities to the console with timestamps. This include
 5.  **Token Management:**
     *   WorkflowMax access tokens are automatically refreshed before they expire.
 
-</rewritten_file> 
