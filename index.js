@@ -14,7 +14,10 @@ const {
   WFX_ACCOUNT_ID,     // Your WorkflowMax Org ID
   DROPBOX_TOKEN,
   DROPBOX_ROOT,
-  PORT = 3000
+  PORT = 3000,
+  // Skip folder creation markers (comma-separated)
+  SKIP_FOLDER_MARKERS = '[NO FOLDER],[SKIP],NO_FOLDER,-TEMP,-TEST,TEMP-,TEST-',
+  SKIP_FOLDER_KEYWORDS = 'TEMPLATE,EXAMPLE,DEMO' // Additional keywords to skip (comma-separated)
 } = process.env;
 
 const AUTH_URL    = 'https://oauth.workflowmax2.com/oauth/authorize';
@@ -294,6 +297,40 @@ async function checkFolderExists(parentPath, folderName) {
   }
 }
 
+// Helper function to check if a job should skip folder creation
+function shouldSkipJobFolder(jobName, jobNo) {
+  if (!jobName) return false;
+  
+  // Parse skip markers from environment variables
+  const skipMarkers = SKIP_FOLDER_MARKERS.split(',').map(marker => marker.trim()).filter(marker => marker);
+  const skipKeywords = SKIP_FOLDER_KEYWORDS.split(',').map(keyword => keyword.trim()).filter(keyword => keyword);
+  
+  const upperJobName = jobName.toUpperCase();
+  const upperJobNo = jobNo ? jobNo.toUpperCase() : '';
+  
+  // Check for exact markers (case-insensitive)
+  for (const marker of skipMarkers) {
+    const upperMarker = marker.toUpperCase();
+    
+    // Check for exact match or surrounded by spaces/punctuation
+    if (upperJobName.includes(upperMarker) || upperJobNo.includes(upperMarker)) {
+      log(`🚫 Job "${jobNo}" - "${jobName}" contains skip marker: "${marker}"`);
+      return true;
+    }
+  }
+  
+  // Check for keywords that indicate the job should be skipped
+  for (const keyword of skipKeywords) {
+    const upperKeyword = keyword.toUpperCase();
+    if (upperJobName.includes(upperKeyword) || upperJobNo.includes(upperKeyword)) {
+      log(`🚫 Job "${jobNo}" - "${jobName}" contains skip keyword: "${keyword}"`);
+      return true;
+    }
+  }
+  
+  return false;
+}
+
 // Schedule job to poll WorkflowMax API every minute
 schedule.scheduleJob('*/1 * * * *', async () => {
   log("Starting job polling...");
@@ -402,6 +439,13 @@ schedule.scheduleJob('*/1 * * * *', async () => {
       log(`Processing job: ${jobNo || "Unknown"}, Created: ${created.toISOString()}`);
       
       const jobName = job.Name;  // Using Name as shown in the API example
+      
+      // Check if this job should skip folder creation
+      if (shouldSkipJobFolder(jobName, jobNo)) {
+        log(`⏭️ Skipping folder creation for job ${jobNo} - "${jobName}"`);
+        continue;
+      }
+      
       const destFolderPath = selectDestinationFolder(jobNo);
       
       // Skip jobs that don't have a valid destination folder (e.g., jobs starting with '1')

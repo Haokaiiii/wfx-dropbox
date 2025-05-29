@@ -15,6 +15,7 @@ This Node.js application automates the creation of Dropbox folders for new jobs 
 *   **Duplicate Job Prevention:**
     *   Checks if a folder with the exact formatted name already exists.
     *   Prevents creation of suffixed job folders (e.g., `9000549_1 - JOB NAME`) if a folder for the base job number (e.g., `9000549 - JOB NAME`) already exists in the same parent directory.
+*   **Skip Folder Creation:** Configurable markers in job names to prevent folder creation for temporary, test, or administrative jobs.
 *   **OAuth 2.0 Authentication:** Handles WorkflowMax authentication token acquisition and refresh.
 *   **Environment Variable Configuration:** Uses a `.env` file for secure management of API keys, tokens, and other settings.
 *   **Logging:** Provides detailed logging for monitoring and debugging.
@@ -60,6 +61,12 @@ DROPBOX_API_SELECT_USER_EMAIL=your_dropbox_team_member_email@example.com
 # Template Folder Path (relative to the root of the Namespace)
 # Update TEMPLATE_PATH in index.js if your template folder is different.
 # Example: 'ISA SURVEYORS PTY LTD (6 or 9)/00_ISA SURVEYORS JOB FOLDER TEMPLATE'
+
+# Skip Folder Creation Configuration
+# Comma-separated list of markers that will prevent folder creation when found in job names
+SKIP_FOLDER_MARKERS=[NO FOLDER],[SKIP],NO_FOLDER,-TEMP,-TEST,TEMP-,TEST-
+# Additional keywords to skip (case-insensitive matching)
+SKIP_FOLDER_KEYWORDS=TEMPLATE,EXAMPLE,DEMO
 ```
 
 **Note on `NAMESPACE_ID` and `TEMPLATE_PATH`:**
@@ -95,6 +102,41 @@ The `NAMESPACE_ID` and `TEMPLATE_PATH` are currently hardcoded in `index.js`. Yo
 3.  Log in with your WorkflowMax credentials and authorize the application.
 4.  Upon successful authorization, you will be redirected back to the `CALLBACK_URL`, and the application will store the necessary OAuth tokens in a `wfx_tokens.json` file.
 5.  The application will automatically use these tokens and refresh them when needed.
+
+## Skip Folder Creation
+
+The application supports skipping folder creation for certain jobs based on markers in the job name or job number. This is useful for:
+- Temporary jobs that don't need permanent folders
+- Test or example jobs
+- Administrative or template jobs
+- Jobs that are duplicates or variations of existing jobs
+
+### Configuration
+
+Configure skip behavior using these environment variables in your `.env` file:
+
+- **`SKIP_FOLDER_MARKERS`**: Comma-separated list of exact markers to look for in job names/numbers
+- **`SKIP_FOLDER_KEYWORDS`**: Comma-separated list of keywords that will trigger skipping
+
+### Examples of Job Names That Will Be Skipped
+
+With the default configuration:
+- `9000549 - Project Name [NO FOLDER]` ➜ Skipped (contains `[NO FOLDER]`)
+- `TEMP-9000550 - Test Project` ➜ Skipped (starts with `TEMP-`)
+- `9000551 - Survey Project -TEMP` ➜ Skipped (ends with `-TEMP`)
+- `9000552 - TEMPLATE Survey` ➜ Skipped (contains `TEMPLATE` keyword)
+- `9000553 - EXAMPLE Project [SKIP]` ➜ Skipped (contains both `EXAMPLE` and `[SKIP]`)
+
+### Customization
+
+You can customize the skip patterns by modifying the environment variables:
+
+```env
+# Only skip jobs with specific brackets
+SKIP_FOLDER_MARKERS=[NO SYNC],[IGNORE]
+# Skip jobs containing these words
+SKIP_FOLDER_KEYWORDS=ARCHIVE,OLD,DUPLICATE
+```
 
 ## Polling Mechanism
 
@@ -143,6 +185,7 @@ The application logs its activities to the console with timestamps. This include
 4.  **Job Processing:**
     *   For each new job:
         *   The base job number is extracted (e.g., `9000549` from `9000549_1`).
+        *   **Skip Check:** The job name and number are checked against configurable skip markers and keywords. If any are found, folder creation is skipped entirely.
         *   The destination parent folder in Dropbox is determined using `selectDestinationFolder` based on the job number's first digit.
         *   The job folder name is formatted using `formatJobName`.
         *   `checkFolderExists` verifies if a folder with the exact formatted name already exists.
@@ -156,4 +199,3 @@ The application logs its activities to the console with timestamps. This include
 
 5.  **Token Management:**
     *   WorkflowMax access tokens are automatically refreshed before they expire.
-
